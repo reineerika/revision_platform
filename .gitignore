@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+*.log
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv/
+
+# Django
+*.sqlite3
+*.log
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+
+# Secret config
+.env
+secrets.json
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# pip
+pip-log.txt
+
+# pytest
+.cache/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# PyInstaller
+build/
+dist/
+
+# Migrations (optional)
+**/migrations/*.py
+!**/migrations/__init__.py

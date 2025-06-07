@@ -1,0 +1,21 @@
+# Django web framework
+Django>=4.2
+
+# PostgreSQL adapter
+psycopg2-binary>=2.9
+
+# Load secret keys from .env file
+python-dotenv>=1.0
+
+# For image uploads
+Pillow>=9.0
+
+# To extract text from PDF
+pdfminer.six==20191110  # exact version required by textract
+
+# To extract text from .docx, .pptx, etc.
+textract==1.6.5
+
+# For parsing Word documents separately if needed
+python-docx>=0.8.11
+

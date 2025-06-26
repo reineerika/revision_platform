@@ -14,8 +14,10 @@ Pillow>=9.0
 pdfminer.six==20191110  # exact version required by textract
 
 # To extract text from .docx, .pptx, etc.
-textract==1.6.5
+textract
 
 # For parsing Word documents separately if needed
 python-docx>=0.8.11
+
+python-pptx
 

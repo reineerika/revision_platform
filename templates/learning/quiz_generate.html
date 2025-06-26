@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+
+{% block title %}Generate Quiz - Revision Platform{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-magic me-2"></i>Generate Quiz
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="post" id="quizGenerateForm">
+                    {% csrf_token %}
+                    
+                    {% if not single_document %}
+                    <div class="mb-3">
+                        <label class="form-label">Select Document <span class="text-danger">*</span></label>
+                        <select name="selected_document" class="form-control" required>
+                            <option value="">Choose a document...</option>
+                            {% for document in documents %}
+                                <option value="{{ document.id }}" data-word-count="{{ document.word_count }}">
+                                    {{ document.title }} ({{ document.word_count }} words)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                        <input type="hidden" name="selected_document" value="{{ documents.0.id }}">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Generating quiz from: <strong>{{ documents.0.title }}</strong>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            Quiz Title <span class="text-danger">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.title.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.description.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.difficulty.id_for_label }}" class="form-label">
+                                    Difficulty Level
+                                </label>
+                                {{ form.difficulty }}
+                                {% if form.difficulty.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.difficulty.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.num_questions.id_for_label }}" class="form-label">
+                                    Number of Questions
+                                </label>
+                                {{ form.num_questions }}
+                                {% if form.num_questions.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.num_questions.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.time_limit_minutes.id_for_label }}" class="form-label">
+                            Time Limit (minutes)
+                        </label>
+                        {{ form.time_limit_minutes }}
+                        {% if form.time_limit_minutes.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.time_limit_minutes.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'learning:document_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Documents
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="generateBtn">
+                            <i class="fas fa-magic me-1"></i>Generate Quiz
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Generation Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-1"></i>Generation Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li><strong>Easy:</strong> Multiple choice and true/false questions</li>
+                    <li><strong>Medium:</strong> Mix of question types including short answers</li>
+                    <li><strong>Hard:</strong> More short answer and analytical questions</li>
+                    <li>Longer documents generate better variety of questions</li>
+                    <li>Well-structured content produces higher quality questions</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Question Type Distribution -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-pie me-1"></i>Question Types
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="questionTypeInfo">
+                    <p class="small text-muted">Select difficulty to see question type distribution</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generation Progress Modal -->
+<div class="modal fade" id="generationModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Generating Quiz...</h5>
+                <p class="text-muted mb-0">This may take a few moments</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" id="generationProgress">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Question type distributions
+const questionTypeDistributions = {
+    'easy': {
+        'Multiple Choice': '40%',
+        'True/False': '40%',
+        'Fill in the Blank': '20%'
+    },
+    'medium': {
+        'Multiple Choice': '30%',
+        'True/False': '30%',
+        'Short Answer': '20%',
+        'Fill in the Blank': '20%'
+    },
+    'hard': {
+        'Multiple Choice': '20%',
+        'True/False': '20%',
+        'Short Answer': '40%',
+        'Fill in the Blank': '20%'
+    }
+};
+
+// Update question type info when difficulty changes
+document.getElementById('{{ form.difficulty.id_for_label }}').addEventListener('change', function() {
+    const difficulty = this.value;
+    const infoDiv = document.getElementById('questionTypeInfo');
+    
+    if (difficulty && questionTypeDistributions[difficulty]) {
+        const distribution = questionTypeDistributions[difficulty];
+        let html = '<div class="small">';
+        
+        for (const [type, percentage] of Object.entries(distribution)) {
+            html += `<div class="d-flex justify-content-between mb-1">
+                        <span>${type}:</span>
+                        <strong>${percentage}</strong>
+                     </div>`;
+        }
+        
+        html += '</div>';
+        infoDiv.innerHTML = html;
+    } else {
+        infoDiv.innerHTML = '<p class="small text-muted">Select difficulty to see question type distribution</p>';
+    }
+});
+
+// Form submission with progress modal
+document.getElementById('quizGenerateForm').addEventListener('submit', function(e) {
+    const generateBtn = document.getElementById('generateBtn');
+    const modal = new bootstrap.Modal(document.getElementById('generationModal'));
+    
+    // Show progress modal
+    modal.show();
+    
+    // Disable generate button
+    generateBtn.disabled = true;
+    
+    // Simulate progress
+    let progress = 0;
+    const progressBar = document.getElementById('generationProgress');
+    const interval = setInterval(function() {
+        progress += Math.random() * 10;
+        if (progress > 90) progress = 90;
+        progressBar.style.width = progress + '%';
+    }, 300);
+    
+    // Clean up interval after 10 seconds
+    setTimeout(function() {
+        clearInterval(interval);
+        progressBar.style.width = '100%';
+    }, 10000);
+});
+
+// Auto-generate title based on document selection
+{% if not single_document %}
+document.querySelector('select[name="selected_document"]').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+    
+    if (selectedOption.value && !titleInput.value) {
+        const documentTitle = selectedOption.text.split(' (')[0]; // Remove word count part
+        titleInput.value = `Quiz: ${documentTitle}`;
+    }
+});
+{% endif %}
+
+// Initialize difficulty change event
+document.getElementById('{{ form.difficulty.id_for_label }}').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
+

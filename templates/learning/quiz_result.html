@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load quiz_extras %}
+
+{% block title %}Quiz Results - {{ attempt.quiz.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.result-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    margin: 0 auto;
+}
+
+.score-excellent { background: linear-gradient(135deg, #11998e, #38ef7d); }
+.score-good { background: linear-gradient(135deg, #667eea, #764ba2); }
+.score-average { background: linear-gradient(135deg, #f093fb, #f5576c); }
+.score-poor { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+
+.question-result {
+    border-left: 4px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.question-result.correct {
+    border-left-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.question-result.incorrect {
+    border-left-color: #dc3545;
+    background-color: #fff8f8;
+}
+
+.answer-comparison {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.stats-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+}
+
+.stats-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Results Header -->
+    <div class="result-header text-center">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <div class="score-circle score-{% if percentage_score >= 90 %}excellent{% elif percentage_score >= 75 %}good{% elif percentage_score >= 60 %}average{% else %}poor{% endif %}">
+                    {{ percentage_score|floatformat:1 }}%
+                </div>
+            </div>
+            <div class="col-md-8 text-md-start text-center mt-3 mt-md-0">
+                <h2 class="mb-2">{{ attempt.quiz.title }}</h2>
+                <p class="mb-1">
+                    <i class="fas fa-file-alt me-1"></i>
+                    Document: {{ attempt.quiz.document.title }}
+                </p>
+                <p class="mb-1">
+                    <i class="fas fa-clock me-1"></i>
+                    Completed in {{ attempt.time_taken_minutes|duration_format }}
+                </p>
+                <p class="mb-0">
+                    <i class="fas fa-calendar me-1"></i>
+                    {{ attempt.completed_at|date:"F d, Y \a\t g:i A" }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h4 class="mb-1">{{ answers|length }}</h4>
+                <p class="text-muted mb-0">Total Questions</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon text-primary">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h4 class="mb-1">{{ attempt.earned_points }}</h4>
+                <p class="text-muted mb-0">Points Earned</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon text-info">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h4 class="mb-1">{{ attempt.time_taken_minutes }}</h4>
+                <p class="text-muted mb-0">Minutes Taken</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-icon text-warning">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <h4 class="mb-1">{{ percentage_score|floatformat:1 }}%</h4>
+                <p class="text-muted mb-0">Final Score</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-line me-2"></i>Performance Analysis
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Score Breakdown</h6>
+                    {% with correct_count=answers|length|add:0 %}
+                        {% for answer in answers %}
+                            {% if answer.is_correct %}
+                                {% with correct_count=correct_count|add:1 %}{% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Correct Answers:</span>
+                            <strong class="text-success">
+                                {% with correct=0 %}
+                                    {% for answer in answers %}
+                                        {% if answer.is_correct %}
+                                            {% with correct=correct|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ correct }}/{{ answers|length }}
+                                {% endwith %}
+                            </strong>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: {{ percentage_score }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>Recommendations</h6>
+                    {% if percentage_score >= 90 %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-trophy me-1"></i>
+                            <strong>Excellent!</strong> You've mastered this material. Consider taking more advanced quizzes.
+                        </div>
+                    {% elif percentage_score >= 75 %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-thumbs-up me-1"></i>
+                            <strong>Good job!</strong> You have a solid understanding. Review the incorrect answers to improve further.
+                        </div>
+                    {% elif percentage_score >= 60 %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-book me-1"></i>
+                            <strong>Keep studying!</strong> You're on the right track but need more practice with this material.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-redo me-1"></i>
+                            <strong>More study needed.</strong> Consider reviewing the document thoroughly and retaking the quiz.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Results -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list-alt me-2"></i>Detailed Results
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for answer in answers %}
+            <div class="question-result {% if answer.is_correct %}correct{% else %}incorrect{% endif %} p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">
+                        <i class="{% question_type_icon answer.question.question_type %} me-1"></i>
+                        Question {{ answer.question.order }}
+                        {% if answer.is_correct %}
+                            <span class="badge bg-success ms-2">
+                                <i class="fas fa-check me-1"></i>Correct
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger ms-2">
+                                <i class="fas fa-times me-1"></i>Incorrect
+                            </span>
+                        {% endif %}
+                    </h6>
+                    <div class="text-end">
+                        <span class="badge bg-secondary">{{ answer.question.get_question_type_display }}</span>
+                        <span class="badge bg-primary">{{ answer.points_earned }}/{{ answer.question.points }} points</span>
+                    </div>
+                </div>
+                
+                <div class="question-text mb-3">
+                    {{ answer.question.question_text|linebreaks }}
+                </div>
+                
+                <div class="answer-comparison">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Your Answer:</h6>
+                            <p class="mb-0">
+                                {% if answer.user_answer %}
+                                    {{ answer.user_answer }}
+                                {% else %}
+                                    <em class="text-muted">No answer provided</em>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success">Correct Answer:</h6>
+                            <p class="mb-0">{{ answer.question.correct_answer }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if answer.question.explanation %}
+                    <hr>
+                    <div>
+                        <h6 class="text-info">Explanation:</h6>
+                        <p class="mb-0">{{ answer.question.explanation }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if answer.time_taken_seconds %}
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Time taken: {{ answer.time_taken_seconds }} seconds
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-center mt-4 mb-5">
+        <a href="{% url 'learning:quiz_detail' attempt.quiz.id %}" class="btn btn-primary me-2">
+            <i class="fas fa-eye me-1"></i>View Quiz Details
+        </a>
+        <a href="{% url 'learning:quiz_take' attempt.quiz.id %}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-redo me-1"></i>Retake Quiz
+        </a>
+        <a href="{% url 'learning:document_detail' attempt.quiz.document.id %}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-file-alt me-1"></i>View Document
+        </a>
+        <a href="{% url 'learning:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-tachometer-alt me-1"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add some interactive elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate score circle
+    const scoreCircle = document.querySelector('.score-circle');
+    if (scoreCircle) {
+        scoreCircle.style.transform = 'scale(0)';
+        setTimeout(() => {
+            scoreCircle.style.transition = 'transform 0.5s ease-out';
+            scoreCircle.style.transform = 'scale(1)';
+        }, 300);
+    }
+    
+    // Animate stats cards
+    const statsCards = document.querySelectorAll('.stats-card');
+    statsCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 500 + (index * 100));
+    });
+    
+    // Animate question results
+    const questionResults = document.querySelectorAll('.question-result');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateX(0)';
+            }
+        });
+    });
+    
+    questionResults.forEach(result => {
+        result.style.opacity = '0';
+        result.style.transform = 'translateX(-20px)';
+        result.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+        observer.observe(result);
+    });
+});
+</script>
+{% endblock %}

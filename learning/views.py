@@ -17,11 +17,18 @@ from collections import defaultdict
 import json
 import threading
 from typing import Tuple
+import requests
+import os
+import environ
+import PyPDF2
 
-from .models import Document, Quiz, Question, QuizAttempt, UserAnswer, PerformanceMetrics
+from .models import Document, Quiz, Question, QuizAttempt, UserAnswer, PerformanceMetrics, QuizAPIResult
 from .forms import DocumentUploadForm, QuizGenerationForm, DocumentSearchForm, BulkDocumentActionForm
 from .utils import extract_text_from_document, get_document_stats
 
+# Charger les variables d'environnement
+env = environ.Env()
+environ.Env.read_env()
 
 @login_required
 def document_list(request):
@@ -32,7 +39,7 @@ def document_list(request):
     if form.is_valid():
         query = form.cleaned_data.get('query')
         document_type = form.cleaned_data.get('document_type')
-        sort_by = form.cleaned_data.get('sort_by', '-created_at')
+        sort_by = form.cleaned_data.get('sort_by') or '-created_at'
         
         if query:
             documents = documents.filter(
@@ -276,10 +283,13 @@ def dashboard(request):
     recent_documents = documents.order_by('-created_at')[:5]
     recent_attempts = quiz_attempts.order_by('-started_at')[:5]
     
+    # Quiz API disponibles
+    api_quizzes = QuizAPIResult.objects.filter(user=user).order_by('-created_at')
     context = {
         'stats': stats,
         'recent_documents': recent_documents,
         'recent_attempts': recent_attempts,
+        'api_quizzes': api_quizzes,
     }
     
     return render(request, 'learning/dashboard.html', context)
@@ -295,12 +305,10 @@ from .analytics import LearningAnalytics
 
 @login_required
 def quiz_generate(request, document_id=None):
-    """Generate quiz from document"""
-    # Get document(s) to generate quiz from
+    """Generate quiz from document using external API"""
     if document_id:
         documents = [get_object_or_404(Document, pk=document_id, uploaded_by=request.user)]
     else:
-        # Handle multiple documents from URL parameter
         document_ids = request.GET.get('documents', '').split(',')
         if document_ids and document_ids[0]:
             documents = Document.objects.filter(
@@ -308,51 +316,99 @@ def quiz_generate(request, document_id=None):
                 uploaded_by=request.user
             )
         else:
-            documents = Document.objects.filter(uploaded_by=request.user, is_processed=True)
+            documents = Document.objects.filter(uploaded_by=request.user)
     
     if request.method == 'POST':
         form = QuizGenerationForm(request.POST)
         if form.is_valid():
-            # Get the selected document
             selected_doc_id = request.POST.get('selected_document')
             if selected_doc_id:
                 document = get_object_or_404(Document, pk=selected_doc_id, uploaded_by=request.user)
-                
-                if not document.is_processed:
-                    messages.error(request, 'Document must be processed before generating quiz.')
-                    return redirect('learning:document_detail', pk=document.pk)
-                
+                doc_text = document.extracted_text or ''
+                # Si le texte est vide, essayer d'extraire nativement
+                if True:
+                    file_path = document.file.path
+                    if file_path.lower().endswith('.pdf'):
+                        try:
+                            with open(file_path, 'rb') as f:
+                                reader = PyPDF2.PdfReader(f)
+                                doc_text = "\n".join(page.extract_text() or '' for page in reader.pages)
+                        except Exception as e:
+                            doc_text = ''
+                    elif file_path.lower().endswith('.txt'):
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                doc_text = f.read()
+                        except Exception as e:
+                            doc_text = ''
+                num_questions = form.cleaned_data.get('num_questions', 6)
+                difficulty = form.cleaned_data.get('difficulty', 'easy')
+                prompt = (
+                    "Génère un QCM et des questions vrai/faux à partir du texte suivant :\n\n"
+                    f"<<CONTENU_DU_FICHIER_ICI>>\n\n"
+                    "Paramètres :\n"
+                    f"- difficulté : {difficulty}\n"
+                    f"- nombre total de questions : {num_questions} (50% QCM et 50% vrai/faux)\n\n"
+                    "Format de réponse attendu : un objet JSON contenant deux clés :\n"
+                    "1. \"qcm\" : tableau de 3 questions à choix multiples. Chaque question doit avoir la structure :\n"
+                    "{\n  \"q\": \"texte de la question\",\n  \"a\": \"option A\",\n  \"b\": \"option B\",\n  \"c\": \"option C\",\n  \"R\": \"a\" (ou \"b\" ou \"c\") correspondant à la bonne réponse\n}\n\n"
+                    "2. \"vrai_faux\" : tableau de 3 affirmations à évaluer comme vraies ou fausses. Chaque élément doit avoir la structure :\n"
+                    "{\n  \"q\": \"affirmation\",\n  \"R\": true ou false\n}\n\n"
+                    "IMPORTANT : la réponse doit être strictement dans ce format JSON, sans aucune explication, sans texte en dehors du JSON. Aucun retour à la ligne inutile.\n\n"
+                    f"CONTENU DU FICHIER : {doc_text}\n"
+                    f"NOMBRE DE QUESTIONS : {num_questions}\n"
+                    f"DIFFICULTE : {difficulty}"
+                )
+
+                print(prompt)
+
+               # raise Exception("test")
+                # Utiliser les variables d'environnement
+                api_url = env('RAPIDAPI_URL', default='https://chatgpt-42.p.rapidapi.com/chat')
+                api_host = env('RAPIDAPI_HOST', default='chatgpt-42.p.rapidapi.com')
+                api_key = env('RAPIDAPI_KEY')
+                headers = {
+                    'Content-Type': 'application/json',
+                    'x-rapidapi-host': api_host,
+                    'x-rapidapi-key': api_key,
+                }
+                data = {
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ]
+                }
                 try:
-                    # Generate quiz
-                    generator = QuizGenerator(document)
-                    quiz = generator.generate_quiz(
-                        title=form.cleaned_data['title'],
-                        description=form.cleaned_data['description'],
-                        difficulty=form.cleaned_data['difficulty'],
-                        num_questions=form.cleaned_data['num_questions'],
-                        time_limit=form.cleaned_data['time_limit_minutes'],
-                        created_by=request.user
+                    response = requests.post(api_url, headers=headers, json=data, timeout=60)
+                    response.raise_for_status()
+                    result = response.json()
+                    content = result['choices'][0]['message']['content']
+                    import json as pyjson
+                    quiz_data = pyjson.loads(content)
+                    # Sauvegarder le résultat dans la base de données
+
+                    quiz_api_result = QuizAPIResult.objects.create(
+                        document=document,
+                        user=request.user,
+                        title=form.cleaned_data.get('title', ''),
+                        api_response=quiz_data
                     )
-                    
-                    messages.success(request, f'Quiz "{quiz.title}" generated successfully with {quiz.total_questions} questions!')
-                    return redirect('learning:quiz_detail', pk=quiz.pk)
-                    
+                    print(quiz_data)
+                    messages.success(request, "Questions générées avec succès !")
+                    return redirect('learning:quiz_api_take', quiz_id=quiz_api_result.id)
                 except Exception as e:
-                    messages.error(request, f'Error generating quiz: {str(e)}')
+                    messages.error(request, f'Erreur lors de la génération via l\'API : {str(e)}')
             else:
                 messages.error(request, 'Please select a document to generate quiz from.')
     else:
         form = QuizGenerationForm()
-        # Pre-fill title if single document
         if len(documents) == 1:
             form.fields['title'].initial = f"Quiz: {documents[0].title}"
-    
     context = {
         'form': form,
         'documents': documents,
         'single_document': len(documents) == 1,
     }
-    
     return render(request, 'learning/quiz_generate.html', context)
 
 
@@ -839,3 +895,99 @@ def export_analytics(request):
     response['Content-Disposition'] = f'attachment; filename="learning_analytics_{request.user.username}_{timezone.now().strftime("%Y%m%d")}.json"'
     
     return response
+
+
+@login_required
+def quiz_api_take(request, quiz_id):
+    """Afficher un quiz généré par l'API et proposer de le lancer ou d'y répondre plus tard."""
+    quiz_api = get_object_or_404(QuizAPIResult, pk=quiz_id, user=request.user)
+    quiz_data = quiz_api.api_response
+    document = quiz_api.document
+    title = quiz_api.title or f"Quiz sur {document.title}"
+    context = {
+        'quiz_api': quiz_api,
+        'quiz_data': quiz_data,
+        'document': document,
+        'title': title,
+    }
+    return render(request, 'learning/quiz_api_take.html', context)
+
+
+@login_required
+def quiz_api_attempt(request, quiz_id):
+    quiz_api = get_object_or_404(QuizAPIResult, pk=quiz_id, user=request.user)
+    quiz_data = quiz_api.api_response
+    questions = quiz_data.get('qcm', []) + quiz_data.get('vrai_faux', [])
+    total_questions = len(questions)
+    time_limit = quiz_api.time_limit_minutes * 60  # en secondes
+
+    # Timer : début de session
+    if request.GET.get('start') == '1':
+        request.session.pop('quiz_start_time', None)
+        request.session.pop('quiz_api_progress', None)
+        request.session.pop('quiz_api_score', None)
+        request.session.pop('quiz_api_answers', None)
+
+    if 'quiz_start_time' not in request.session:
+        request.session['quiz_start_time'] = timezone.now().timestamp()
+        request.session['quiz_api_progress'] = 0
+        request.session['quiz_api_score'] = 0
+        request.session['quiz_api_answers'] = []
+
+    elapsed = int(timezone.now().timestamp() - request.session['quiz_start_time'])
+    remaining = max(0, time_limit - elapsed)
+    current_index = request.session.get('quiz_api_progress', 0)
+    score = request.session.get('quiz_api_score', 0)
+    answers = request.session.get('quiz_api_answers', [])
+
+    # Si temps écoulé ou toutes questions répondues
+    if remaining == 0 or current_index >= total_questions:
+        # Nettoyer la session
+        request.session.pop('quiz_start_time', None)
+        request.session.pop('quiz_api_progress', None)
+        request.session.pop('quiz_api_score', None)
+        request.session.pop('quiz_api_answers', None)
+        return render(request, 'learning/quiz_api_result.html', {
+            'quiz_api': quiz_api,
+            'score': score,
+            'total': total_questions,
+            'answers': answers,
+            'timeout': remaining == 0,
+        })
+
+    question = questions[current_index]
+    feedback = None
+    correct = None
+
+    if request.method == 'POST':
+        user_answer = request.POST.get('answer')
+        # Correction QCM
+        if 'R' in question and 'a' in question:
+            correct = (user_answer == question['R'])
+        # Correction vrai/faux
+        elif 'R' in question and isinstance(question['R'], bool):
+            correct = (str(user_answer).lower() == str(question['R']).lower())
+        else:
+            correct = False
+        feedback = 'Bonne réponse !' if correct else 'Mauvaise réponse.'
+        # Mise à jour score et progression
+        if correct:
+            score += 1
+        answers.append({'q': question.get('q'), 'user': user_answer, 'correct': correct, 'expected': question.get('R')})
+        current_index += 1
+        # Sauvegarder progression
+        request.session['quiz_api_progress'] = current_index
+        request.session['quiz_api_score'] = score
+        request.session['quiz_api_answers'] = answers
+        # Rediriger pour afficher la question suivante (PRG pattern)
+        return redirect('learning:quiz_api_attempt', quiz_id=quiz_id)
+
+    return render(request, 'learning/quiz_api_attempt.html', {
+        'quiz_api': quiz_api,
+        'question': question,
+        'index': current_index + 1,
+        'total': total_questions,
+        'remaining': remaining,
+        'score': score,
+        'feedback': feedback,
+    })

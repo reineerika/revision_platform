@@ -180,6 +180,40 @@
     </div>
 </div>
 
+<h3>Quiz générés par l'IA</h3>
+{% if api_quizzes %}
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>Titre</th>
+                <th>Document</th>
+                <th>Date</th>
+                <th>Difficulté</th>
+                <th>Questions</th>
+                <th>Temps (min)</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for quiz in api_quizzes %}
+            <tr>
+                <td>{{ quiz.title }}</td>
+                <td>{{ quiz.document.title }}</td>
+                <td>{{ quiz.created_at|date:'d/m/Y H:i' }}</td>
+                <td>{{ quiz.difficulty }}</td>
+                <td>{{ quiz.num_questions }}</td>
+                <td>{{ quiz.time_limit_minutes }}</td>
+                <td>
+                    <a href="{% url 'learning:quiz_api_take' quiz.id %}" class="btn btn-primary btn-sm">Commencer</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Aucun quiz généré par l'IA disponible.</p>
+{% endif %}
+
 <!-- Quick Actions -->
 <div class="row">
     <div class="col-12">

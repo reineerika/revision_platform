@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+    <p><strong>Document :</strong> {{ document.title }}</p>
+    <p><strong>Date de génération :</strong> {{ quiz_api.created_at|date:'d/m/Y H:i' }}</p>
+    <div class="mt-4">
+        <a href="{% url 'learning:quiz_api_attempt' quiz_api.id %}" class="btn btn-success">Commencer le quiz</a>
+        <a href="{% url 'learning:dashboard' %}" class="btn btn-secondary ms-2">Répondre plus tard</a>
+    </div>
+</div>
+{% endblock %} 

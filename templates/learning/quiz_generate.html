@@ -15,31 +15,31 @@
                 <form method="post" id="quizGenerateForm">
                     {% csrf_token %}
                     
-                    {% if not single_document %}
                     <div class="mb-3">
-                        <label class="form-label">Select Document <span class="text-danger">*</span></label>
-                        <select name="selected_document" class="form-control" required>
-                            <option value="">Choose a document...</option>
-                            {% for document in documents %}
-                                <option value="{{ document.id }}" data-word-count="{{ document.word_count }}">
-                                    {{ document.title }} ({{ document.word_count }} words)
-                                </option>
+                        <label for="selected_document" class="form-label">Document</label>
+                        <select name="selected_document" id="selected_document" class="form-select">
+                            <option value="">-- Sélectionner un document --</option>
+                            {% for doc in documents %}
+                                <option value="{{ doc.id }}" {% if request.POST.selected_document == doc.id|stringformat:'s' %}selected{% endif %}>{{ doc.title }}</option>
                             {% endfor %}
                         </select>
-                    </div>
-                    {% else %}
-                        <input type="hidden" name="selected_document" value="{{ documents.0.id }}">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Generating quiz from: <strong>{{ documents.0.title }}</strong>
+                        {% if form.selected_document.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.selected_document.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div id="doc-description" class="form-text mt-2">
+                            {% if documents|length == 1 %}
+                                {{ documents.0.description }}
+                            {% endif %}
                         </div>
-                    {% endif %}
+                    </div>
                     
                     <div class="mb-3">
-                        <label for="{{ form.title.id_for_label }}" class="form-label">
-                            Quiz Title <span class="text-danger">*</span>
-                        </label>
-                        {{ form.title }}
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Titre</label>
+                        <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}" class="form-control" value="{{ form.title.value|default_if_none:'' }}" disabled>
                         {% if form.title.errors %}
                             <div class="text-danger small">
                                 {% for error in form.title.errors %}
@@ -50,10 +50,8 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">
-                            Description
-                        </label>
-                        {{ form.description }}
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                        <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="form-control" disabled>{{ form.description.value|default_if_none:'' }}</textarea>
                         {% if form.description.errors %}
                             <div class="text-danger small">
                                 {% for error in form.description.errors %}
@@ -267,6 +265,25 @@ document.querySelector('select[name="selected_document"]').addEventListener('cha
 
 // Initialize difficulty change event
 document.getElementById('{{ form.difficulty.id_for_label }}').dispatchEvent(new Event('change'));
+
+// Préparer les descriptions des documents
+var docDescriptions = {};
+{% for doc in documents %}
+    docDescriptions['{{ doc.id }}'] = `{{ doc.description|escapejs }}`;
+{% endfor %}
+
+var select = document.getElementById('selected_document');
+var descInput = document.getElementById('{{ form.description.id_for_label }}');
+if (select && descInput) {
+    select.addEventListener('change', function() {
+        var val = this.value;
+        descInput.value = docDescriptions[val] || '';
+    });
+    // Pré-remplir si un document est déjà sélectionné
+    if (select.value && docDescriptions[select.value]) {
+        descInput.value = docDescriptions[select.value];
+    }
+}
 </script>
 {% endblock %}
 

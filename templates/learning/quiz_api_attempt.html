@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ quiz_api.title }}</h2>
+    <p><strong>Question {{ index }} / {{ total }}</strong></p>
+    <div class="mb-2">
+        <span class="badge bg-info">Temps restant : <span id="timer">{{ remaining }}</span> sec</span>
+        <span class="badge bg-secondary ms-2">Score : {{ score }}</span>
+    </div>
+    <hr>
+    <form method="post" autocomplete="off">
+        {% csrf_token %}
+        <div class="mb-3">
+            <strong>{{ question.q }}</strong>
+        </div>
+        {% if question.a %}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="answer" id="a" value="a" required>
+                <label class="form-check-label" for="a">A. {{ question.a }}</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="answer" id="b" value="b">
+                <label class="form-check-label" for="b">B. {{ question.b }}</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="answer" id="c" value="c">
+                <label class="form-check-label" for="c">C. {{ question.c }}</label>
+            </div>
+        {% else %}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="answer" id="true" value="True" required>
+                <label class="form-check-label" for="true">Vrai</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="answer" id="false" value="False">
+                <label class="form-check-label" for="false">Faux</label>
+            </div>
+        {% endif %}
+        {% if feedback %}
+            <div class="alert alert-info mt-3">{{ feedback }}</div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary mt-3">Valider</button>
+    </form>
+</div>
+<script>
+let time = {{ remaining }};
+const timerSpan = document.getElementById('timer');
+const interval = setInterval(function() {
+    if (time > 0) {
+        time--;
+        timerSpan.textContent = time;
+    } else {
+        clearInterval(interval);
+        window.location.reload();
+    }
+}, 1000);
+</script>
+{% endblock %} 

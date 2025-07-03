@@ -27,6 +27,8 @@ urlpatterns = [
     path('quiz/attempt/<int:pk>/', views.quiz_attempt, name='quiz_attempt'),
     path('quiz/attempt/<int:pk>/submit/', views.quiz_submit, name='quiz_submit'),
     path('quiz/result/<int:pk>/', views.quiz_result, name='quiz_result'),
+    path('quiz/api/<int:quiz_id>/take/', views.quiz_api_take, name='quiz_api_take'),
+    path('quiz/api/<int:quiz_id>/attempt/', views.quiz_api_attempt, name='quiz_api_attempt'),
     
     # Analytics
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),

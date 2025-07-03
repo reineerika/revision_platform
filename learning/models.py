@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.conf import settings
 import json
 
 
@@ -203,3 +204,17 @@ class StudyGoal(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class QuizAPIResult(models.Model):
+    document = models.ForeignKey('Document', on_delete=models.CASCADE, related_name='api_quizzes')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_quizzes')
+    title = models.CharField(max_length=255, blank=True)
+    api_response = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    time_limit_minutes = models.PositiveIntegerField(default=30)
+    difficulty = models.CharField(max_length=50, default='easy')
+    num_questions = models.PositiveIntegerField(default=6)
+
+    def __str__(self):
+        return f"QuizAPIResult for {self.document.title} by {self.user.username} ({self.created_at:%Y-%m-%d %H:%M})"

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Mes documents</h2>
+    <form method="get" class="row g-2 align-items-end mb-4 bg-light p-3 rounded shadow-sm">
+        <div class="col-md-4">
+            <label for="id_query" class="form-label mb-1">Recherche</label>
+            {{ search_form.query }}
+        </div>
+        <div class="col-md-3">
+            <label for="id_document_type" class="form-label mb-1">Type de document</label>
+            {{ search_form.document_type }}
+        </div>
+        <div class="col-md-3">
+            <label for="id_sort_by" class="form-label mb-1">Trier par</label>
+            {{ search_form.sort_by }}
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-primary">Filtrer</button>
+        </div>
+    </form>
+    <p>Total de documents : {{ total_documents }}</p>
+    {% if documents %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for doc in documents %}
+                <tr>
+                    <td>{{ doc.title }}</td>
+                    <td>{{ doc.description|truncatechars:50 }}</td>
+                    <td>{{ doc.document_type }}</td>
+                    <td>{{ doc.created_at|date:'d/m/Y H:i' }}</td>
+                    <td>{% if doc.is_processed %}Traité{% else %}En cours{% endif %}</td>
+                    <td>
+                        <a href="{% url 'learning:document_detail' doc.pk %}" class="btn btn-sm btn-info">Détail</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <nav>
+            <ul class="pagination">
+                {% if documents.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ documents.previous_page_number }}">Précédent</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">Page {{ documents.number }} / {{ documents.paginator.num_pages }}</span></li>
+                {% if documents.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ documents.next_page_number }}">Suivant</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% else %}
+        <p>Aucun document trouvé.</p>
+    {% endif %}
+    <a href="{% url 'learning:document_upload' %}" class="btn btn-success mt-3">Ajouter un document</a>
+</div>
+{% endblock %} 

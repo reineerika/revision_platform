@@ -80,7 +80,7 @@ class QuizGenerationForm(forms.ModelForm):
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter quiz title',
-                'required': True
+                'required': False
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -97,6 +97,10 @@ class QuizGenerationForm(forms.ModelForm):
                 'value': '30'
             })
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['title'].required = False
 
 
 class DocumentSearchForm(forms.Form):

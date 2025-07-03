@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Détail du document : {{ document.title }}</h2>
+    <p><strong>Description :</strong> {{ document.description }}</p>
+    <p><strong>Date d'upload :</strong> {{ document.created_at }}</p>
+    <p><strong>Type :</strong> {{ document.document_type }}</p>
+    <p><strong>Statut :</strong> {% if document.is_processed %}Traité{% else %}Uploader{% endif %}</p>
+    <!-- {% if document.processing_error %}
+        <div class="alert alert-danger">Erreur de traitement : {{ document.processing_error }}</div>
+    {% endif %} -->
+
+    <p>
+        <a href="{{ document.file.url }}" target="_blank" class="btn btn-outline-primary">
+            Ouvrir le fichier original
+        </a>
+    </p>
+
+    <h4>Statistiques</h4>
+    {% if stats %}
+        <ul>
+            <li>Nombre de mots : {{ stats.word_count }}</li>
+            <li>Nombre de caractères : {{ stats.character_count }}</li>
+            <li>Paragraphes : {{ stats.paragraph_count }}</li>
+            <li>Phrases : {{ stats.sentence_count }}</li>
+            <li>Temps de lecture estimé : {{ stats.reading_time_minutes }} min</li>
+            <li>Moyenne mots/phrase : {{ stats.average_words_per_sentence|floatformat:1 }}</li>
+        </ul>
+    {% else %}
+        <p>Aucune statistique disponible.</p>
+    {% endif %}
+
+    <h4>Quiz associés</h4>
+    {% if quizzes %}
+        <ul>
+        {% for quiz in quizzes %}
+            <li><a href="{% url 'learning:quiz_detail' quiz.pk %}">{{ quiz.title }}</a> ({{ quiz.total_questions }} questions)</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucun quiz généré pour ce document.</p>
+    {% endif %}
+
+    <h4>Performance</h4>
+    {% if performance %}
+        <ul>
+            <li>Nombre de tentatives : {{ performance.total_attempts }}</li>
+            <li>Score moyen : {{ performance.average_score|floatformat:1 }}%</li>
+            <li>Meilleur score : {{ performance.best_score|floatformat:1 }}%</li>
+            <li>Temps total passé : {{ performance.total_time_minutes }} min</li>
+            <li>Niveau de maîtrise : {{ performance.mastery_level }}</li>
+        </ul>
+    {% else %}
+        <p>Aucune donnée de performance disponible.</p>
+    {% endif %}
+
+    <a href="{% url 'learning:document_list' %}" class="btn btn-secondary mt-3">Retour à la liste des documents</a>
+    {% if document.is_processed %}
+        <a href="{% url 'learning:document_text_view' document.pk %}" class="btn btn-info mt-3">Voir le texte extrait</a>
+    {% endif %}
+</div>
+{% endblock %} 

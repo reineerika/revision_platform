@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ quiz_api.title }}</h2>
+    {% if timeout %}
+        <div class="alert alert-warning">Temps écoulé !</div>
+    {% endif %}
+    <div class="alert alert-info">Score : {{ score }} / {{ total }}</div>
+    <h4>Réponses</h4>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Question</th>
+                <th>Votre réponse</th>
+                <th>Bonne réponse</th>
+                <th>Résultat</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for ans in answers %}
+            <tr>
+                <td>{{ ans.q }}</td>
+                <td>{{ ans.user }}</td>
+                <td>{{ ans.expected }}</td>
+                <td>{% if ans.correct %}<span class="text-success">✔</span>{% else %}<span class="text-danger">✘</span>{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="{% url 'learning:dashboard' %}" class="btn btn-primary mt-3">Retour au dashboard</a>
+</div>
+{% endblock %} 

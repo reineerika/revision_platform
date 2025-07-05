@@ -24,7 +24,7 @@ import PyPDF2
 
 from .models import Document, Quiz, Question, QuizAttempt, UserAnswer, PerformanceMetrics, QuizAPIResult
 from .forms import DocumentUploadForm, QuizGenerationForm, DocumentSearchForm, BulkDocumentActionForm
-from .utils import extract_text_from_document, get_document_stats
+from .utils import extract_text_from_document, get_document_stats, send_revision_reminder_email
 
 # Charger les variables d'environnement
 env = environ.Env()
@@ -402,8 +402,18 @@ def quiz_generate(request, document_id=None):
                 messages.error(request, 'Please select a document to generate quiz from.')
     else:
         form = QuizGenerationForm()
+        
+        # Utiliser la difficulté préférée de l'utilisateur
+        try:
+            user_profile = request.user.profile
+            if user_profile.preferred_difficulty:
+                form.fields['difficulty'].initial = user_profile.preferred_difficulty
+        except:
+            pass  # Si pas de profil, utiliser la valeur par défaut
+        
         if len(documents) == 1:
             form.fields['title'].initial = f"Quiz: {documents[0].title}"
+    
     context = {
         'form': form,
         'documents': documents,
@@ -735,6 +745,8 @@ def update_performance_metrics(user, document, attempt):
 @login_required
 def analytics_dashboard(request):
     """Main analytics dashboard"""
+    from .utils import LearningAnalytics
+    
     analytics = LearningAnalytics(request.user)
     
     # Get all analytics data
@@ -915,6 +927,8 @@ def quiz_api_take(request, quiz_id):
 
 @login_required
 def quiz_api_attempt(request, quiz_id):
+    from .models import QuizAPIAttempt
+    
     quiz_api = get_object_or_404(QuizAPIResult, pk=quiz_id, user=request.user)
     quiz_data = quiz_api.api_response
     questions = quiz_data.get('qcm', []) + quiz_data.get('vrai_faux', [])
@@ -942,17 +956,32 @@ def quiz_api_attempt(request, quiz_id):
 
     # Si temps écoulé ou toutes questions répondues
     if remaining == 0 or current_index >= total_questions:
+        # Créer l'enregistrement de tentative
+        attempt = QuizAPIAttempt.objects.create(
+            user=request.user,
+            quiz_api=quiz_api,
+            status='completed',
+            score=score,
+            total_questions=total_questions,
+            correct_answers=score,
+            time_taken_minutes=elapsed // 60,
+            answers=answers,
+            completed_at=timezone.now()
+        )
+        
         # Nettoyer la session
         request.session.pop('quiz_start_time', None)
         request.session.pop('quiz_api_progress', None)
         request.session.pop('quiz_api_score', None)
         request.session.pop('quiz_api_answers', None)
+        
         return render(request, 'learning/quiz_api_result.html', {
             'quiz_api': quiz_api,
             'score': score,
             'total': total_questions,
             'answers': answers,
             'timeout': remaining == 0,
+            'attempt': attempt,
         })
 
     question = questions[current_index]
@@ -991,3 +1020,22 @@ def quiz_api_attempt(request, quiz_id):
         'score': score,
         'feedback': feedback,
     })
+
+
+@login_required
+def test_email_notification(request):
+    """Vue pour tester l'envoi d'emails de rappel"""
+    if request.method == 'POST':
+        try:
+            # Envoyer un email de test à l'utilisateur connecté
+            success = send_revision_reminder_email(request.user, "Test de notification")
+            
+            if success:
+                messages.success(request, 'Email de test envoyé avec succès ! Vérifiez votre boîte de réception.')
+            else:
+                messages.error(request, 'Erreur lors de l\'envoi de l\'email. Vérifiez que vous avez un email valide dans votre profil.')
+                
+        except Exception as e:
+            messages.error(request, f'Erreur : {str(e)}')
+    
+    return render(request, 'learning/test_email.html')

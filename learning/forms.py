@@ -93,7 +93,7 @@ class QuizGenerationForm(forms.ModelForm):
             'time_limit_minutes': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '5',
-                'max': '180',
+                'max': '120',
                 'value': '30'
             })
         }

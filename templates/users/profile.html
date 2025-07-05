@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Profil de {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-user-circle me-2"></i>Profil de {{ user.username }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong><i class="fas fa-envelope me-1"></i>Email :</strong> 
+                        <span class="text-muted">{{ user.email|default:'Non défini' }}</span>
+                        {% if user.email %}
+                            <small class="d-block text-success">
+                                <i class="fas fa-check-circle me-1"></i>Notifications activées
+                            </small>
+                        {% else %}
+                            <small class="d-block text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Aucun email défini pour les notifications
+                            </small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong><i class="fas fa-user me-1"></i>Bio :</strong> 
+                        <span class="text-muted">{{ profile.bio|default:'-' }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong><i class="fas fa-chart-line me-1"></i>Difficulté préférée :</strong> 
+                        <span class="text-muted">{{ profile.preferred_difficulty|title }}</span>
+                        <div class="mt-2">
+                            {% if profile.preferred_difficulty == 'easy' %}
+                                <span class="badge bg-success">Facile</span>
+                                <small class="d-block text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Quiz avec questions à choix multiples et vrai/faux
+                                </small>
+                            {% elif profile.preferred_difficulty == 'medium' %}
+                                <span class="badge bg-warning">Moyenne</span>
+                                <small class="d-block text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Mix de types de questions incluant des réponses courtes
+                                </small>
+                            {% else %}
+                                <span class="badge bg-danger">Difficile</span>
+                                <small class="d-block text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Questions analytiques et réponses détaillées
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'users:edit_profile' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i>Modifier le profil
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

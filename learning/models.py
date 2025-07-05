@@ -217,4 +217,36 @@ class QuizAPIResult(models.Model):
     num_questions = models.PositiveIntegerField(default=6)
 
     def __str__(self):
-        return f"QuizAPIResult for {self.document.title} by {self.user.username} ({self.created_at:%Y-%m-%d %H:%M})"
+        return f"{self.title} - {self.user.username}"
+
+
+class QuizAPIAttempt(models.Model):
+    """Model for user attempts on API-generated quizzes"""
+    STATUS_CHOICES = [
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('abandoned', 'Abandoned'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_quiz_attempts')
+    quiz_api = models.ForeignKey(QuizAPIResult, on_delete=models.CASCADE, related_name='attempts')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
+    score = models.FloatField(default=0.0)
+    total_questions = models.IntegerField(default=0)
+    correct_answers = models.IntegerField(default=0)
+    time_taken_minutes = models.IntegerField(default=0)
+    answers = models.JSONField(default=dict)  # Stocker les réponses utilisateur
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.quiz_api.title} ({self.status})"
+
+    @property
+    def percentage_score(self):
+        if self.total_questions > 0:
+            return (self.correct_answers / self.total_questions) * 100
+        return 0
+
+    class Meta:
+        ordering = ['-started_at']

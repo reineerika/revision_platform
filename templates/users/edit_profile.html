@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifier le profil{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-user-edit me-2"></i>Modifier le profil</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="editProfileForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-1"></i>Email
+                            </label>
+                            <input type="email" name="email" id="email" class="form-control" 
+                                   value="{{ user.email|default:'' }}" 
+                                   placeholder="votre.email@exemple.com"
+                                   pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                                   title="Veuillez entrer une adresse email valide">
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Cet email sera utilisé pour vous envoyer des rappels de révision.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">
+                                <i class="fas fa-user me-1"></i>Bio
+                            </label>
+                            <textarea name="bio" id="bio" class="form-control" rows="4" placeholder="Parlez-nous de vous...">{{ profile.bio|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="preferred_difficulty" class="form-label">
+                                <i class="fas fa-chart-line me-1"></i>Difficulté préférée
+                            </label>
+                            <select name="preferred_difficulty" id="preferred_difficulty" class="form-select">
+                                <option value="easy" {% if profile.preferred_difficulty == 'easy' %}selected{% endif %}>Facile</option>
+                                <option value="medium" {% if profile.preferred_difficulty == 'medium' %}selected{% endif %}>Moyenne</option>
+                                <option value="hard" {% if profile.preferred_difficulty == 'hard' %}selected{% endif %}>Difficile</option>
+                            </select>
+                            <div class="form-text">
+                                Cette préférence sera utilisée pour générer des quiz adaptés à votre niveau.
+                            </div>
+                        </div>
+                        
+                        <!-- Question Type Distribution Info -->
+                        <div class="mb-3">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-chart-pie me-1"></i>Types de questions pour votre niveau
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="questionTypeInfo">
+                                        <p class="small text-muted">Sélectionnez une difficulté pour voir la distribution des types de questions</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'users:profile' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Retour au profil
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Sauvegarder
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Question type distributions
+const questionTypeDistributions = {
+    'easy': {
+        'Choix multiples': '40%',
+        'Vrai/Faux': '40%',
+        'Compléter les blancs': '20%'
+    },
+    'medium': {
+        'Choix multiples': '30%',
+        'Vrai/Faux': '30%',
+        'Réponses courtes': '20%',
+        'Compléter les blancs': '20%'
+    },
+    'hard': {
+        'Choix multiples': '20%',
+        'Vrai/Faux': '20%',
+        'Réponses courtes': '40%',
+        'Compléter les blancs': '20%'
+    }
+};
+
+// Update question type info when difficulty changes
+document.getElementById('preferred_difficulty').addEventListener('change', function() {
+    const difficulty = this.value;
+    const infoDiv = document.getElementById('questionTypeInfo');
+    
+    if (difficulty && questionTypeDistributions[difficulty]) {
+        const distribution = questionTypeDistributions[difficulty];
+        let html = '<div class="small">';
+        
+        for (const [type, percentage] of Object.entries(distribution)) {
+            html += `<div class="d-flex justify-content-between mb-1">
+                        <span>${type}:</span>
+                        <strong>${percentage}</strong>
+                     </div>`;
+        }
+        
+        html += '<div class="mt-2 p-2 bg-light rounded">';
+        if (difficulty === 'easy') {
+            html += '<small><i class="fas fa-info-circle me-1"></i>Questions simples pour débuter</small>';
+        } else if (difficulty === 'medium') {
+            html += '<small><i class="fas fa-info-circle me-1"></i>Équilibre entre facilité et défi</small>';
+        } else {
+            html += '<small><i class="fas fa-info-circle me-1"></i>Questions analytiques avancées</small>';
+        }
+        html += '</div></div>';
+        
+        infoDiv.innerHTML = html;
+    } else {
+        infoDiv.innerHTML = '<p class="small text-muted">Sélectionnez une difficulté pour voir la distribution des types de questions</p>';
+    }
+});
+
+// Initialize difficulty change event
+document.getElementById('preferred_difficulty').dispatchEvent(new Event('change'));
+
+document.getElementById('editProfileForm').addEventListener('submit', function(e) {
+    const emailField = document.getElementById('email');
+    const email = emailField.value.trim();
+    
+    if (email && !emailField.checkValidity()) {
+        e.preventDefault();
+        alert('Veuillez entrer une adresse email valide.');
+        emailField.focus();
+        return false;
+    }
+});
+</script>
+{% endblock %} 

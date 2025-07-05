@@ -51,12 +51,25 @@ def edit_profile(request):
         # Handle profile update
         bio = request.POST.get('bio', '')
         preferred_difficulty = request.POST.get('preferred_difficulty', 'medium')
+        email = request.POST.get('email', '').strip()
+        
+        # Validate email if provided
+        if email:
+            from django.core.validators import EmailValidator
+            from django.core.exceptions import ValidationError
+            try:
+                EmailValidator()(email)
+                request.user.email = email
+                request.user.save()
+            except ValidationError:
+                messages.error(request, 'Veuillez entrer une adresse email valide.')
+                return render(request, 'users/edit_profile.html', {'profile': profile})
         
         profile.bio = bio
         profile.preferred_difficulty = preferred_difficulty
         profile.save()
         
-        messages.success(request, 'Profile updated successfully!')
+        messages.success(request, 'Profil mis à jour avec succès!')
         return redirect('users:profile')
     
     return render(request, 'users/edit_profile.html', {'profile': profile})

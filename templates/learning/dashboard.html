@@ -14,66 +14,39 @@
 </div>
 
 <!-- Quick Stats -->
-<div class="row mb-4">
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">{{ stats.total_documents }}</h4>
-                        <p class="mb-0">Documents</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-file-alt fa-2x"></i>
-                    </div>
+<div class="row mb-4 justify-content-center">
+    <div class="col-12">
+        <div class="p-4 rounded-3" style="background: #f8f9fa; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+            <div class="row">
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <a href="{% url 'learning:document_upload' %}" class="btn btn-primary w-100 py-4">
+                        <i class="fas fa-upload fa-2x d-block mb-2"></i>
+                        Upload Document
+                    </a>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">{{ stats.total_quizzes }}</h4>
-                        <p class="mb-0">Quizzes</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-question-circle fa-2x"></i>
-                    </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <a href="{% url 'learning:quiz_generate' %}" class="btn btn-success w-100 py-4">
+                        <i class="fas fa-magic fa-2x d-block mb-2"></i>
+                        Generate Quiz
+                    </a>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">{{ stats.completed_quizzes }}</h4>
-                        <p class="mb-0">Completed</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-check-circle fa-2x"></i>
-                    </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <a href="{% url 'learning:analytics_dashboard' %}" class="btn btn-info w-100 py-4">
+                        <i class="fas fa-chart-bar fa-2x d-block mb-2"></i>
+                        View Analytics
+                    </a>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">{{ stats.average_score|floatformat:1 }}%</h4>
-                        <p class="mb-0">Avg Score</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-chart-line fa-2x"></i>
-                    </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <a href="{% url 'users:profile' %}" class="btn btn-secondary w-100 py-4">
+                        <i class="fas fa-user-cog fa-2x d-block mb-2"></i>
+                        Profile Settings
+                    </a>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <a href="{% url 'learning:test_email' %}" class="btn btn-warning w-100 py-4">
+                        <i class="fas fa-envelope fa-2x d-block mb-2"></i>
+                        Test Notifications
+                    </a>
                 </div>
             </div>
         </div>
@@ -82,7 +55,7 @@
 
 <div class="row">
     <!-- Recent Documents -->
-    <div class="col-lg-6 mb-4">
+    <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
@@ -129,58 +102,10 @@
             </div>
         </div>
     </div>
-    
-    <!-- Recent Quiz Attempts -->
-    <div class="col-lg-6 mb-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-history me-1"></i>Recent Quiz Attempts
-                </h5>
-                <a href="{% url 'learning:quiz_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
-            </div>
-            <div class="card-body">
-                {% if recent_attempts %}
-                    {% for attempt in recent_attempts %}
-                    <div class="d-flex justify-content-between align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}">
-                        <div>
-                            <h6 class="mb-1">
-                                <a href="{% url 'learning:quiz_result' attempt.pk %}" class="text-decoration-none">
-                                    {{ attempt.quiz.title }}
-                                </a>
-                            </h6>
-                            <small class="text-muted">
-                                {{ attempt.started_at|date:"M d, Y g:i A" }}
-                            </small>
-                        </div>
-                        <div class="text-end">
-                            {% if attempt.status == 'completed' %}
-                                <span class="badge bg-{{ attempt.score|score_color }}">
-                                    {{ attempt.score|floatformat:1 }}%
-                                </span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ attempt.get_status_display }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No quiz attempts yet.</p>
-                        {% if recent_documents %}
-                            <a href="{% url 'learning:quiz_generate' %}" class="btn btn-primary">
-                                <i class="fas fa-magic me-1"></i>Generate Your First Quiz
-                            </a>
-                        {% endif %}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 </div>
 
-<h3>Quiz générés par l'IA</h3>
+<!-- Bloc Recent Quiz Attempts (anciennement Quiz générés par l'IA) -->
+<h3>Recent Quiz Attempts</h3>
 {% if api_quizzes %}
     <table class="table table-bordered mt-3">
         <thead>
@@ -214,44 +139,4 @@
     <p>Aucun quiz généré par l'IA disponible.</p>
 {% endif %}
 
-<!-- Quick Actions -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-bolt me-1"></i>Quick Actions
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="{% url 'learning:document_upload' %}" class="btn btn-outline-primary w-100 py-3">
-                            <i class="fas fa-upload fa-2x d-block mb-2"></i>
-                            Upload Document
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="{% url 'learning:quiz_generate' %}" class="btn btn-outline-success w-100 py-3">
-                            <i class="fas fa-magic fa-2x d-block mb-2"></i>
-                            Generate Quiz
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="{% url 'learning:analytics_dashboard' %}" class="btn btn-outline-info w-100 py-3">
-                            <i class="fas fa-chart-bar fa-2x d-block mb-2"></i>
-                            View Analytics
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary w-100 py-3">
-                            <i class="fas fa-user-cog fa-2x d-block mb-2"></i>
-                            Profile Settings
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}

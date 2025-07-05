@@ -40,6 +40,7 @@ urlpatterns = [
     # AJAX endpoints
     path('ajax/document/<int:pk>/status/', views.ajax_document_status, name='ajax_document_status'),
     path('ajax/quiz/attempt/<int:attempt_pk>/answer/', views.quiz_submit_answer, name='quiz_submit_answer'),
+    path('test-email/', views.test_email_notification, name='test_email'),
 ]
 
 # Serve media files during development

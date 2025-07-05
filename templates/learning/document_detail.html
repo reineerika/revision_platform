@@ -10,6 +10,30 @@
         <div class="alert alert-danger">Erreur de traitement : {{ document.processing_error }}</div>
     {% endif %} -->
 
+    <!-- Bouton Generate Quiz après upload réussi -->
+    {% if document.is_processed %}
+        <div class="row mb-4 justify-content-center">
+            <div class="col-12">
+                <div class="p-4 rounded-3" style="background: #f8f9fa; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12 mb-3">
+                            <a href="{% url 'learning:quiz_generate' document.pk %}" class="btn btn-success w-100 py-4">
+                                <i class="fas fa-magic fa-2x d-block mb-2"></i>
+                                Generate Quiz
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-sm-12 mb-3">
+                            <a href="{% url 'learning:document_text_view' document.pk %}" class="btn btn-info w-100 py-4">
+                                <i class="fas fa-file-text fa-2x d-block mb-2"></i>
+                                View Extracted Text
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     <p>
         <a href="{{ document.file.url }}" target="_blank" class="btn btn-outline-primary">
             Ouvrir le fichier original
@@ -55,8 +79,5 @@
     {% endif %}
 
     <a href="{% url 'learning:document_list' %}" class="btn btn-secondary mt-3">Retour à la liste des documents</a>
-    {% if document.is_processed %}
-        <a href="{% url 'learning:document_text_view' document.pk %}" class="btn btn-info mt-3">Voir le texte extrait</a>
-    {% endif %}
 </div>
 {% endblock %} 

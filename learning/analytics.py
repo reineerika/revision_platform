@@ -6,7 +6,7 @@ import json
 
 from .models import (
     Document, Quiz, QuizAttempt, UserAnswer, PerformanceMetrics, 
-    Question, StudyGoal
+    Question, StudyGoal, QuizAPIAttempt
 )
 from users.models import StudySession
 
@@ -22,24 +22,43 @@ class LearningAnalytics:
         # Basic counts
         total_documents = Document.objects.filter(uploaded_by=self.user).count()
         total_quizzes = Quiz.objects.filter(document__uploaded_by=self.user).count()
+        
+        # Include both regular and API attempts
         total_attempts = QuizAttempt.objects.filter(user=self.user).count()
+        api_attempts = QuizAPIAttempt.objects.filter(user=self.user).count()
+        total_attempts += api_attempts
+        
         completed_attempts = QuizAttempt.objects.filter(user=self.user, status='completed').count()
+        completed_api_attempts = QuizAPIAttempt.objects.filter(user=self.user, status='completed').count()
+        completed_attempts += completed_api_attempts
         
-        # Performance metrics
-        avg_score = QuizAttempt.objects.filter(
+        # Performance metrics - combine both types
+        regular_scores = QuizAttempt.objects.filter(
             user=self.user, status='completed'
-        ).aggregate(avg_score=Avg('score'))['avg_score'] or 0
+        ).values_list('score', flat=True)
         
-        best_score = QuizAttempt.objects.filter(
+        api_scores = QuizAPIAttempt.objects.filter(
             user=self.user, status='completed'
-        ).aggregate(max_score=Max('score'))['max_score'] or 0
+        ).values_list('score', flat=True)
         
-        # Recent activity
+        all_scores = list(regular_scores) + list(api_scores)
+        
+        avg_score = sum(all_scores) / len(all_scores) if all_scores else 0
+        best_score = max(all_scores) if all_scores else 0
+        
+        # Recent activity - include both regular and API attempts
         last_7_days = timezone.now() - timedelta(days=7)
-        recent_attempts = QuizAttempt.objects.filter(
+        recent_regular_attempts = QuizAttempt.objects.filter(
             user=self.user,
             started_at__gte=last_7_days
         ).count()
+        
+        recent_api_attempts = QuizAPIAttempt.objects.filter(
+            user=self.user,
+            started_at__gte=last_7_days
+        ).count()
+        
+        recent_attempts = recent_regular_attempts + recent_api_attempts
         
         # Study streak
         study_streak = self._calculate_study_streak()
@@ -49,8 +68,15 @@ class LearningAnalytics:
             total=Sum('duration_minutes')
         )['total'] or 0
         
+        # Processed documents count
+        processed_documents = Document.objects.filter(
+            uploaded_by=self.user,
+            is_processed=True
+        ).count()
+        
         return {
             'total_documents': total_documents,
+            'processed_documents': processed_documents,
             'total_quizzes': total_quizzes,
             'total_attempts': total_attempts,
             'completed_attempts': completed_attempts,
@@ -67,16 +93,31 @@ class LearningAnalytics:
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=days)
         
-        attempts = QuizAttempt.objects.filter(
+        # Get both regular and API attempts
+        regular_attempts = QuizAttempt.objects.filter(
             user=self.user,
             status='completed',
             completed_at__date__gte=start_date,
             completed_at__date__lte=end_date
-        ).order_by('completed_at')
+        )
+        
+        api_attempts = QuizAPIAttempt.objects.filter(
+            user=self.user,
+            status='completed',
+            completed_at__date__gte=start_date,
+            completed_at__date__lte=end_date
+        )
         
         # Group by date
         daily_performance = defaultdict(list)
-        for attempt in attempts:
+        
+        # Process regular attempts
+        for attempt in regular_attempts:
+            date_str = attempt.completed_at.date().strftime('%Y-%m-%d')
+            daily_performance[date_str].append(attempt.score)
+        
+        # Process API attempts
+        for attempt in api_attempts:
             date_str = attempt.completed_at.date().strftime('%Y-%m-%d')
             daily_performance[date_str].append(attempt.score)
         
@@ -157,15 +198,33 @@ class LearningAnalytics:
     
     def get_difficulty_analysis(self):
         """Analyze performance by difficulty level"""
-        attempts = QuizAttempt.objects.filter(
+        # Get regular quiz attempts
+        regular_attempts = QuizAttempt.objects.filter(
             user=self.user,
             status='completed'
         ).select_related('quiz')
         
+        # Get API quiz attempts
+        api_attempts = QuizAPIAttempt.objects.filter(
+            user=self.user,
+            status='completed'
+        ).select_related('quiz_api')
+        
         difficulty_stats = defaultdict(lambda: {'attempts': 0, 'total_score': 0, 'best_score': 0})
         
-        for attempt in attempts:
+        # Process regular attempts
+        for attempt in regular_attempts:
             difficulty = attempt.quiz.difficulty
+            difficulty_stats[difficulty]['attempts'] += 1
+            difficulty_stats[difficulty]['total_score'] += attempt.score
+            difficulty_stats[difficulty]['best_score'] = max(
+                difficulty_stats[difficulty]['best_score'], 
+                attempt.score
+            )
+        
+        # Process API attempts
+        for attempt in api_attempts:
+            difficulty = attempt.quiz_api.difficulty
             difficulty_stats[difficulty]['attempts'] += 1
             difficulty_stats[difficulty]['total_score'] += attempt.score
             difficulty_stats[difficulty]['best_score'] = max(

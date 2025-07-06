@@ -79,15 +79,15 @@
                         <tbody>
                             {% for subject in subject_performance %}
                             <tr>
-                                <td>{{ subject.subject }}</td>
-                                <td>{{ subject.attempts }}</td>
+                                <td>{{ subject.document_title }}</td>
+                                <td>{{ subject.total_attempts }}</td>
                                 <td>
                                     <div class="progress" style="height: 20px;">
                                         <div class="progress-bar" role="progressbar" 
-                                             style="width: {{ subject.avg_score }}%"
-                                             aria-valuenow="{{ subject.avg_score }}" 
+                                             style="width: {{ subject.average_score }}%"
+                                             aria-valuenow="{{ subject.average_score }}" 
                                              aria-valuemin="0" aria-valuemax="100">
-                                            {{ subject.avg_score }}%
+                                            {{ subject.average_score }}%
                                         </div>
                                     </div>
                                 </td>
@@ -134,17 +134,17 @@
                         <tbody>
                             {% for qtype in question_type_analysis %}
                             <tr>
-                                <td>{{ qtype.type }}</td>
-                                <td>{{ qtype.total }}</td>
-                                <td>{{ qtype.correct }}</td>
+                                <td>{{ qtype.display_name }}</td>
+                                <td>{{ qtype.total_questions }}</td>
+                                <td>{{ qtype.correct_answers }}</td>
                                 <td>
                                     <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar {% if qtype.accuracy >= 80 %}bg-success{% elif qtype.accuracy >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                        <div class="progress-bar {% if qtype.accuracy_percentage >= 80 %}bg-success{% elif qtype.accuracy_percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
                                              role="progressbar" 
-                                             style="width: {{ qtype.accuracy }}%"
-                                             aria-valuenow="{{ qtype.accuracy }}" 
+                                             style="width: {{ qtype.accuracy_percentage }}%"
+                                             aria-valuenow="{{ qtype.accuracy_percentage }}" 
                                              aria-valuemin="0" aria-valuemax="100">
-                                            {{ qtype.accuracy }}%
+                                            {{ qtype.accuracy_percentage }}%
                                         </div>
                                     </div>
                                 </td>
@@ -185,17 +185,17 @@
                             <tr>
                                 <td>
                                     <span class="badge {% if diff.difficulty == 'easy' %}bg-success{% elif diff.difficulty == 'medium' %}bg-warning{% else %}bg-danger{% endif %}">
-                                        {{ diff.difficulty|title }}
+                                        {{ diff.display_name }}
                                     </span>
                                 </td>
                                 <td>{{ diff.attempts }}</td>
                                 <td>
                                     <div class="progress" style="height: 20px;">
                                         <div class="progress-bar" role="progressbar" 
-                                             style="width: {{ diff.avg_score }}%"
-                                             aria-valuenow="{{ diff.avg_score }}" 
+                                             style="width: {{ diff.average_score }}%"
+                                             aria-valuenow="{{ diff.average_score }}" 
                                              aria-valuemin="0" aria-valuemax="100">
-                                            {{ diff.avg_score }}%
+                                            {{ diff.average_score }}%
                                         </div>
                                     </div>
                                 </td>
@@ -227,8 +227,8 @@
                     <div class="list-group-item">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">
-                                <i class="fas fa-{% if suggestion.type == 'activity' %}running{% else %}target{% endif %} me-2"></i>
-                                {{ suggestion.message }}
+                                <i class="fas fa-{% if suggestion.type == 'performance' %}chart-line{% elif suggestion.type == 'skill' %}brain{% else %}calendar{% endif %} me-2"></i>
+                                {{ suggestion.title }}
                             </h6>
                             <small class="text-muted">
                                 <span class="badge {% if suggestion.priority == 'high' %}bg-danger{% else %}bg-warning{% endif %}">
@@ -236,6 +236,8 @@
                                 </span>
                             </small>
                         </div>
+                        <p class="mb-1">{{ suggestion.description }}</p>
+                        <small class="text-muted">Action suggérée: {{ suggestion.action }}</small>
                     </div>
                     {% endfor %}
                 </div>
@@ -258,8 +260,8 @@
     
     if (performanceData.length > 0) {
         const labels = performanceData.map(d => d.date);
-        const scores = performanceData.map(d => d.score);
-        const attempts = performanceData.map(d => d.attempts);
+        const scores = performanceData.map(d => d.average_score);
+        const attempts = performanceData.map(d => d.attempts_count);
         
         new Chart(ctx, {
             type: 'line',
